@@ -8,7 +8,21 @@ export default {
 
     created() {
         if (this.field.dependsOn !== undefined) {
-            this.registerDependencyWatchers(this.$root);
+            Nova.$on(this.field.dependsOn + '-change', this.dependencyWatcher);
+
+            this.$nextTick(() => {
+                const component = this.$parent.$children.find(
+                    component => component.field && component.field.attribute === this.field.dependsOn
+                );
+
+                if (component) {
+                    if (component.selectedResourceId !== undefined) {
+                        this.dependencyWatcher(component.selectedResourceId);
+                    } else if (component.value !== undefined) {
+                        this.dependencyWatcher(component.value);
+                    }
+                }
+            });
         }
     },
 
@@ -16,35 +30,14 @@ export default {
         if (this.watcherDebounce) {
             clearTimeout(this.watcherDebounce);
         }
+
+        Nova.$off(this.field.dependsOn + '-change', this.dependencyWatcher);
     },
 
     methods: {
-        registerDependencyWatchers(root) {
-            root.$children.forEach(component => {
-                if (this.componentIsDependency(component)) {
-                    if (component.selectedResourceId !== undefined) {
-                        // BelongsTo field
-                        component.$watch('selectedResourceId', this.dependencyWatcher, {immediate: true});
-                        this.dependencyWatcher(component.selectedResourceId);
-                    } else if (component.value !== undefined) {
-                        // Text based fields
-                        component.$watch('value', this.dependencyWatcher, {immediate: true});
-                        this.dependencyWatcher(component.value);
-                    }
-                }
-
-                this.registerDependencyWatchers(component);
-            })
-        },
-        componentIsDependency(component) {
-            if (component.field === undefined) {
-                return false;
-            }
-
-            return component.field.attribute === this.field.dependsOn;
-        },
         dependencyWatcher(value) {
             clearTimeout(this.watcherDebounce);
+
             this.watcherDebounce = setTimeout(() => {
                 if (value === this.dependsOnValue) {
                     return;
