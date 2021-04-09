@@ -48,6 +48,10 @@ export default {
                 this.clearSelection();
                 this.$nextTick(() => {
                     this.initializeComponent();
+
+                    if ('prepopulate' in this) {
+                        this.prepopulate();
+                    }
                 });
 
                 this.watcherDebounce = null;
